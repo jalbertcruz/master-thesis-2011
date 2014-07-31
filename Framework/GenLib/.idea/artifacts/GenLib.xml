@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="GenLib">
+    <output-path>$PROJECT_DIR$/out/artifacts/GenLib</output-path>
+    <root id="archive" name="GenLib.jar">
+      <element id="module-output" name="GenLib" />
+      <element id="dir-copy" path="$PROJECT_DIR$/src/scala" />
+      <element id="dir-copy" path="$PROJECT_DIR$/src/templates" />
+      <element id="dir-copy" path="$PROJECT_DIR$/src/uci" />
+    </root>
+  </artifact>
+</component>

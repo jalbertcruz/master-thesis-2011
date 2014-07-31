@@ -1,0 +1,17 @@
+<component name="libraryTable">
+  <library name="Gen Extras">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../GenLib/out/artifacts/GenLib/GenLib.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../Libraries/common.jar!/" />
+      <root url="jar://E:/Program Files/Libs/stringtemplate-3.2/lib/stringtemplate.jar!/" />
+      <root url="jar://E:/Program Files/Libs/stringtemplate-3.2/lib/antlr-2.7.7.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../Libraries/robotLibCommon.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../GenLib/out/artifacts/GenLib/GenLib.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../GenLib/out/artifacts/GenLib/GenLib.jar!/generator" />
+      <root url="jar://$PROJECT_DIR$/../../Libraries/robotLibCommon.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,8 @@
+
+package uci;
+
+public interface ITV {
+    void encender();
+    void apagar();
+    boolean encendido();
+}

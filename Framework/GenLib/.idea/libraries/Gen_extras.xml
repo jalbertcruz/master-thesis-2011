@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gen extras">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../Libraries/common.jar!/" />
+      <root url="jar://E:/Program Files/Libs/stringtemplate-3.2/lib/stringtemplate.jar!/" />
+      <root url="jar://E:/Program Files/Libs/stringtemplate-3.2/lib/antlr-2.7.7.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

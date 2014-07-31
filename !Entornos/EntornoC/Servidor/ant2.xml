@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="JA Extra">
+
+ <target name=" JA Copy">
+    <copy todir="..">
+        <fileset dir="out/artifacts/Servidor/" includes="*.jar"/>
+    </copy>
+</target>
+
+</project>
+

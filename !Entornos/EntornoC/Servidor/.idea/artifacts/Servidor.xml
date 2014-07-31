@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Servidor">
+    <output-path>$PROJECT_DIR$/out/artifacts/Servidor</output-path>
+    <properties id="ant-postprocessing">
+      <options enabled="true">
+        <file>file://$PROJECT_DIR$/ant2.xml</file>
+        <target>JA Copy</target>
+      </options>
+    </properties>
+    <root id="archive" name="Servidor.jar">
+      <element id="module-output" name="Servidor" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,448 @@
+
+group scalaErlang;
+
+formalParameter()::= <<
+<it.name> : <it.type.name>
+>>
+
+actualParameter()::= <<
+    <it.name>
+>>
+
+childInterface(model)::= <<
+package <model.package>;
+
+public interface <model.name> extends <model.FullName> {
+
+    void set<model.name>Done(<model.name>Done p0);
+}
+>>
+
+doneInterface(model)::= <<
+package <model.package>;
+
+public interface <model.name>Done{
+<model.methods:{m|
+
+	<if(m.isAsincronico)>void <m.name>Done(<if(m.isQuery)><m.returnType> p0<else><endif>);<else><endif>
+}>
+}
+>>
+
+scalaClientSrc(model) ::= <<
+package <model.package>
+
+import scala.erlang.conversions.Converter._
+import com.ericsson.otp.erlang._
+import scala.erlang.server._
+
+class <model.name>ProxyClientFactory( nodo: Node,
+                               erlServiceName: String, erlServiceNodeName: String,
+                               serviceClientFactoryNameStr: String ) {
+
+    private[this] val serviceClientFactoryName = Symbol(serviceClientFactoryNameStr)
+    
+    private[this] val clientObjs = new scala.collection.mutable.ListBuffer[<model.name>ProxyClient]
+
+    private[this] val llave = scala.collection.mutable.Map[Symbol, (Boolean, (Symbol, String))]()
+
+    def newObject(): <model.FullName> = {
+        clientFactory send (erlServiceName, erlServiceNodeName, scl2otp('newObject, (serviceClientFactoryName, nodo.fullName.name)))
+        llave += ('newObjectDone -> (false, ('a, "")))
+        while(! llave('newObjectDone)._1)
+        Thread.sleep(10)
+        val sName = serviceClientFactoryName.name + "_client" + clientObjs.length.toString
+        val res = new <model.name>ProxyClient(nodo, erlServiceName, erlServiceNodeName, Symbol(sName), llave('newObjectDone)._2._1, Symbol(llave('newObjectDone)._2._2))
+        clientObjs += res
+        res
+    }
+
+    val clientFactory = new scala.erlang.server.OtpActor {
+
+        override def node = nodo
+
+        override def acts: PartialFunction[Any, Unit] = {
+
+            case ('newObjectDone, (serviceName: Symbol, serviceNodeName: String)) =>
+                //println(serviceName, serviceNodeName)
+                llave += ('newObjectDone -> (true, (serviceName, serviceNodeName)))
+                //result = (serviceName, serviceNodeName)
+
+            case msg => println("client factory: " + msg)
+        }
+
+    }
+    clientFactory registerName serviceClientFactoryName.name
+
+}
+
+class <model.name>ProxyClient (node: Node,
+                        erlServiceName: String, erlServiceNodeName: String,
+                        senderServiceName: Symbol,
+                        serviceName: Symbol, serviceNodeName: Symbol) extends <model.FullName> {
+<model.methods:{m|
+<if(m.isProcedure)>
+<if(m.HasNoParameters)>
+    def <m.name>() {
+        proxy.sendAndWait(
+            'm<m.name>
+        )
+    }
+<else>
+    def <m.name>(<m.parametersInfo:formalParameter(); separator=", ">) {
+        proxy.sendAndWait(
+            'm<m.name>, new OtpErlangBinary(<m.parametersInfo:actualParameter(); separator=", ">)
+        )
+    }
+<endif>
+<else>
+<if(m.HasNoParameters)>
+    def <m.name>: <m.returnTypeName> = {
+        proxy.sendAndWait(
+            'm<m.name>
+        ).asInstanceOf[<m.returnTypeName>]
+    }
+<else>
+    def <m.name>(<m.parametersInfo:formalParameter(); separator=", ">): <m.returnTypeName> = {
+        proxy.sendAndWait(
+            'm<m.name>, new OtpErlangBinary(<m.parametersInfo:actualParameter(); separator=", ">)
+        ).asInstanceOf[<m.returnTypeName>]
+    }
+<endif>
+<endif>
+}>
+
+    private[this] object proxy {
+        val nodo: Node = node
+        val llaves = scala.collection.mutable.Map[Symbol, (Boolean, Any)]()
+        def sendAndWait(label: Symbol, arg: OtpErlangBinary) = {
+            client send ( erlServiceName, erlServiceNodeName, scl2otp(label,
+                                                                      (senderServiceName, node.fullName.name),
+                                                                      (serviceName, serviceNodeName),
+                                                                      arg) )
+            llaves += (label -> (false, 0))
+            while(! llaves(label)._1)
+            Thread.sleep(10)
+            llaves(label)._2
+        }
+        def sendAndWait(label: Symbol) = {
+
+            client send ( erlServiceName, erlServiceNodeName, scl2otp(label,
+                                                                      (senderServiceName, node.fullName.name),
+                                                                      (serviceName, serviceNodeName)
+                                                              )
+            )
+            llaves += (label -> (false, 0))
+            while(! llaves(label)._1)
+            Thread.sleep(10)
+            llaves(label)._2
+        }
+
+        val client = new scala.erlang.server.OtpActor {
+            override def node = nodo
+            override def acts: PartialFunction[Any, Unit] = {
+<model.methods:{m|
+<if(m.isProcedure)>
+                case 'm<m.name>Done =>
+                    llaves += ('m<m.name> -> (true, 0))
+<else>
+                case ('m<m.name>Done, res: OtpErlangBinary ) =>
+                    llaves += ('m<m.name> -> (true, res.getObject()))
+<endif>
+}>
+
+                case msg => println(msg)
+            }
+
+        }
+        client registerName senderServiceName.name
+    }
+}
+>>
+
+
+scalaServerSrc(model) ::= <<
+package <model.package>
+
+import scala.erlang.conversions.Converter._
+import com.ericsson.otp.erlang._
+import scala.erlang.server._
+
+class <model.name>ProxyServerFactory( nodo: Node,
+                               erlServiceName: String, erlServiceNodeName: String,
+                               serviceFactoryNameStr: String,
+                               obj : <model.ImplementerType> 
+) {
+
+    private[this] val serviceFactoryName = Symbol(serviceFactoryNameStr)
+
+    @scala.reflect.BeanProperty private[this] var Services = new scala.collection.mutable.ListBuffer[<model.name>ProxyServer]()
+
+    private[this] val server = new scala.erlang.server.OtpActor {
+
+        override def node = nodo
+
+        override def acts: PartialFunction[Any, Unit] = {
+
+            case ('newObject, (senderFactoryName: Symbol, senderFactoryNodeName: String)) =>
+                val sName = serviceFactoryName.name + "_server" + Services.length.toString
+                val t = new <model.name>ProxyServer(nodo, erlServiceName, erlServiceNodeName, Symbol(sName), obj)
+                Services += t
+
+                send( erlServiceName, erlServiceNodeName,
+                     scl2otp('newObjectDone,
+                             (senderFactoryName, Symbol(senderFactoryNodeName)),
+                             (Symbol(sName), nodo.fullName.name)
+                    )
+                )
+
+            case msg => println("server factory..." + msg)
+        }
+
+    }
+    server registerName serviceFactoryName.name
+
+    server send (erlServiceName, erlServiceNodeName,
+                 scl2otp(('registerFactory, (serviceFactoryName, nodo.fullName))) )
+
+}
+
+
+class <model.name>ProxyServer( nodo: Node,
+                         erlServiceName: String, erlServiceNodeName: String,
+                         serviceName: Symbol,
+                         Objeto : <model.ImplementerType>
+ ) {
+
+<model.methods : { m |
+	<if(m.isAsincronico)>var <m.name>DoneAux:(<if(m.isQuery)><m.returnType><else><endif>) => Unit = _<else><endif>
+}>
+        private[this] val server = new scala.erlang.server.OtpActor {
+        override def node = nodo
+        override def acts: PartialFunction[Any, Unit] = {
+<model.methods : { m |
+<if(m.isProcedure)>
+<if(m.HasMoreThanOneParameters)>
+<if(m.isAsincronico)>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                val ( <m.parametersInfo:formalParameter(); separator=", "> ) = b.getObject()
+                <m.name>DoneAux = () => {
+                   send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName))))
+                }
+                Objeto <m.name> (<m.parametersInfo:actualParameter(); separator=", ">)
+                
+<else>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                val ( <m.parametersInfo:formalParameter(); separator=", "> ) = b.getObject()
+                Objeto <m.name> (<m.parametersInfo:actualParameter(); separator=", ">)
+                send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName))))
+<endif>                
+<else>
+<if(m.HasOneParameter)>
+<if(m.isAsincronico)>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                val p0 = b.getObject().asInstanceOf[<m.FirstParameterInfo.Type.Name>]
+                <m.name>DoneAux = () => {
+                   send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName))))
+                }
+                Objeto <m.name> p0
+<else>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                val p0 = b.getObject().asInstanceOf[<m.FirstParameterInfo.Type.Name>]
+                Objeto <m.name> p0
+                send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName))))
+<endif>                
+<else>
+<if(m.isAsincronico)>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String)) =>
+                <m.name>DoneAux = () => {
+                   send(erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName))))
+                }
+                Objeto.<m.name>
+                
+<else>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String)) =>
+                Objeto.<m.name>
+                send(erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName))))
+                
+<endif>                
+<endif>
+<endif>
+<else>
+<if(m.HasMoreThanOneParameters)>
+<if(m.isAsincronico)>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                var res : <m.returnType> = null
+                <m.name>DoneAux = (a) => {
+                   send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName)), 
+                   new OtpErlangBinary(<if(m.isValorAsincronico)>a<else>res<endif> )))
+                }
+                val (<m.parametersInfo:formalParameter(); separator=", ">) = b.getObject()
+                res = Objeto <m.name> (<m.parametersInfo:actualParameter(); separator=", ">)
+<else>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                val (<m.parametersInfo:formalParameter(); separator=", ">) = b.getObject()
+                val res = Objeto <m.name> (<m.parametersInfo:actualParameter(); separator=", ">)
+                send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName)), new OtpErlangBinary(res)))
+<endif>                
+<else>
+<if(m.HasOneParameter)>
+<if(m.isAsincronico)>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                var res : <m.returnType> = null
+                <m.name>DoneAux = (a) => {
+	                send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName)), 
+                   new OtpErlangBinary(<if(m.isValorAsincronico)>a<else>res<endif> )))
+                }
+                val p0 = b.getObject().asInstanceOf[<m.FirstParameterInfo.Type.Name>]
+                res = Objeto <m.name> ( p0 )
+<else>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String), b: OtpErlangBinary) =>
+                val p0 = b.getObject().asInstanceOf[<m.FirstParameterInfo.Type.Name>]
+                val res = Objeto <m.name> ( p0 )
+                send (erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName)), new OtpErlangBinary(res)))
+<endif>                
+<else>
+<if(m.isAsincronico)>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String)) =>
+                var res : <m.returnType> = null
+                <m.name>DoneAux = (a) => {
+                send(erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName)), 
+                   new OtpErlangBinary(<if(m.isValorAsincronico)>a<else>res<endif> )))
+		}                
+                res = Objeto.<m.name>
+<else>
+            case ('m<m.name>, (senderServiceName: Symbol, senderServiceNodeName: String)) =>
+                val res = Objeto.<m.name>
+                send(erlServiceName, erlServiceNodeName, scl2otp('m<m.name>Done, (senderServiceName, Symbol(senderServiceNodeName)), new OtpErlangBinary(res)))
+<endif>                
+<endif>
+<endif>
+<endif>
+}>
+            case msg => println("server " + msg)
+        }
+
+    }
+    
+    object obj<model.name>Done extends <model.name>Done {
+
+    	<model.methods : { m |
+    	<if(m.isAsincronico)>
+      		def <m.name>Done(<if(m.isQuery)>r: <m.returnType><else><endif>){
+    			<m.name>DoneAux(<if(m.isQuery)>r<else><endif>)
+    		}
+    	<endif>
+        }>    	
+    
+    }
+    
+    Objeto.set<model.name>Done(obj<model.name>Done)
+    
+    server registerName serviceName.name
+
+}
+
+>>
+
+erlangChannelSrc(model) ::= <<
+-module(<model.SName>Channel).
+
+-export([
+    start/0,
+    stop/0,
+    init/0
+        ]).
+
+loop(Rest, Cola) ->
+    receive
+        {registerFactory, {FactoryServiceName, FactoryServiceNodeName}} ->
+            loop( Rest, [ {FactoryServiceName, FactoryServiceNodeName} | Cola] );
+
+        {newObject, {FactoryClient, HostClient}} ->
+            case Cola of
+                [] ->
+                    {FactoryClient, HostClient} ! noService,
+                    loop(Rest, Cola);
+
+                [ {FactoryServer, HostServer} | T ] ->
+                    {FactoryServer, HostServer} ! {newObject, {FactoryClient, HostClient}},
+                    case T of
+                        [] -> loop([], [{FactoryServer, HostServer} | Rest]);
+                        _  -> loop([{FactoryServer, HostServer} | Rest], T)
+                    end
+
+            end;
+
+	{newObjectDone,
+         {SenderFactoryName, SenderFactoryNodeName},
+         {ServiceName, ServiceNodeName}} ->
+            {SenderFactoryName, SenderFactoryNodeName} ! {newObjectDone, {ServiceName, ServiceNodeName}},
+            loop(Rest, Cola);
+
+<model.methods:{m|
+<if(m.isProcedure)>
+<if(m.HasNoParameters)>
+        {m<m.name>,
+         {SenderServiceName, SenderServiceNodeName},
+         {ServiceName, ServiceNodeName}} ->
+            {ServiceName, ServiceNodeName} ! {m<m.name>, {SenderServiceName, SenderServiceNodeName}},
+            loop(Rest, Cola);
+
+        {m<m.name>Done, {SenderServiceName, SenderServiceNodeName}} ->
+            {SenderServiceName, SenderServiceNodeName} ! m<m.name>Done,
+            loop(Rest, Cola);
+<else>
+        {m<m.name>,
+         {SenderServiceName, SenderServiceNodeName},
+         {ServiceName, ServiceNodeName},
+         Bin} ->
+            {ServiceName, ServiceNodeName} ! {m<m.name>, {SenderServiceName, SenderServiceNodeName}, Bin},
+            loop(Rest, Cola);
+
+        {m<m.name>Done, {SenderServiceName, SenderServiceNodeName}} ->
+            {SenderServiceName, SenderServiceNodeName} ! m<m.name>Done,
+            loop(Rest, Cola);
+
+<endif>
+<else>
+<if(m.HasNoParameters)>
+        {m<m.name>,
+         {SenderServiceName, SenderServiceNodeName},
+         {ServiceName, ServiceNodeName}} ->
+            {ServiceName, ServiceNodeName} ! {m<m.name>, {SenderServiceName, SenderServiceNodeName}},
+            loop(Rest, Cola);
+
+        {m<m.name>Done, {SenderServiceName, SenderServiceNodeName}, Res} ->
+            {SenderServiceName, SenderServiceNodeName} ! {m<m.name>Done, Res},
+            loop(Rest, Cola);
+<else>
+        {m<m.name>,
+         {SenderServiceName, SenderServiceNodeName},
+         {ServiceName, ServiceNodeName},
+         Bin} ->
+            {ServiceName, ServiceNodeName} ! {m<m.name>, {SenderServiceName, SenderServiceNodeName}, Bin},
+            loop(Rest, Cola);
+
+        {m<m.name>Done, {SenderServiceName, SenderServiceNodeName}, Res} ->
+            {SenderServiceName, SenderServiceNodeName} ! {m<m.name>Done, Res},
+            loop(Rest, Cola);
+
+<endif>
+<endif>
+}>
+
+       stop -> ok
+
+    end.
+
+start() ->
+    register(channel, spawn(channel, init, [])).
+
+init() ->
+    loop([],[]).
+
+stop()->
+    channel ! stop.
+
+>>

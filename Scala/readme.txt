@@ -1,0 +1,3 @@
+- Generador de los dos factories y de los dos proxies
+- Necesidad de epmd en el cliente
+- No todos los tipos basicos soportados

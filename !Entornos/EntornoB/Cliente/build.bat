@@ -1,0 +1,4 @@
+
+rem scalac -verbose -target:jvm-1.5 -sourcepath ./src/uci/erlProxyGen/*.scala;./src/uci/proveedor/*.java;./src/uci/erlProxyGen/*.java -classpath "C:/Usuarios/Albert/Mis Documentos/Maestria 2/Src/Libraries/OtpScala.jar";"C:/Usuarios/Albert/Mis Documentos/Maestria 2/Src/Libraries/common.jar";"C:/Usuarios/Albert/Mis Documentos/Maestria 2/Src/Libraries/robotLibCommon.jar"
+
+scalac -verbose -target:jvm-1.5 -sourcepath ./src/uci/erlProxyGen/*.scala -classpath "C:/Usuarios/Albert/Mis Documentos/Maestria 2/Src/Libraries/OtpScala.jar";"C:/Usuarios/Albert/Mis Documentos/Maestria 2/Src/Libraries/common.jar";"C:/Usuarios/Albert/Mis Documentos/Maestria 2/Src/Libraries/robotLibCommon.jar"

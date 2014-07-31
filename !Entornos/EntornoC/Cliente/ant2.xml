@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="JA Extra">
+
+ <target name=" JA Copy">
+    <copy todir="../../../IDE/EntornoB">
+        <fileset dir="out/artifacts/Cliente/" includes="*.jar"/>
+    </copy>
+
+     <copy todir="..">
+         <fileset dir="out/artifacts/Cliente/" includes="*.jar"/>
+     </copy>
+
+ </target>
+
+</project>
+

@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Extra">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../../Libraries/robotLibCommon.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../../Libraries/OtpScala.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../../Libraries/common.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
